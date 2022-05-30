@@ -1,88 +1,156 @@
-/*-----------------------------------------------------------------------/
-/  Low level disk interface modlue include file   (C)ChaN, 2014          /
-/-----------------------------------------------------------------------*/
+#ifndef DMA_INC
+#define DMA_INC
 
-#ifndef _DISKIO_DEFINED
-#define _DISKIO_DEFINED
+#include <xc.h>
 
-#ifdef __cplusplus
-extern "C" {
+typedef struct __DMA_Descriptor__ DMA_HANDLE_t;
+
+extern inline uint32_t DMA_isBusy(DMA_HANDLE_t * handle);
+extern inline uint32_t DMA_readISRFlags(DMA_HANDLE_t * handle);
+
+extern inline uint32_t DMA_isEnabled(DMA_HANDLE_t * handle);
+extern inline void DMA_setEnabled(DMA_HANDLE_t * handle, uint32_t en);
+
+extern inline void DMA_forceTransfer(DMA_HANDLE_t * handle);
+extern inline void DMA_abortTransfer(DMA_HANDLE_t * handle);
+
+
+uint32_t DMA_setSrcConfig(DMA_HANDLE_t * handle, uint32_t * src, int32_t size);
+uint32_t DMA_setDestConfig(DMA_HANDLE_t * handle, uint32_t * dest, int32_t size);
+
+uint32_t DMA_setTransferAttributes(DMA_HANDLE_t * handle, int32_t cellSize, int32_t startISR, int32_t abortISR);
+
+uint32_t DMA_setChannelAttributes(DMA_HANDLE_t * handle, int32_t enableChaining, int32_t chainDir, int32_t evtIfDisabled, int32_t autoEn, int32_t prio);
+uint32_t DMA_setInterruptConfig(DMA_HANDLE_t * handle, int32_t srcDoneEN, int32_t srcHalfEmptyEN, int32_t dstDoneEN, int32_t dstHalfFullEN, int32_t blockDoneEN, int32_t cellDoneEN, int32_t abortEN, int32_t errorEN);
+
+DMA_HANDLE_t * DMA_allocateChannel();
+uint32_t DMA_freeChannel(DMA_HANDLE_t * handle);
+
+#define DCHCON  handle->CON->w
+#define DCHCONbits (*handle->CON)
+#define DCHECON handle->ECON->w
+#define DCHECONSET *(handle->ECONSET)
+#define DCHECONbits (*handle->ECON)
+#define DCHINT  handle->INT->w
+#define DCHINTbits (*handle->INT)
+
+#define DCHSSA  *(handle->SSA)
+#define DCHDSA  *(handle->DSA)
+#define DCHSSIZ *(handle->SSIZ)
+#define DCHDSIZ *(handle->DSIZ)
+#define DCHCSIZ *(handle->CSIZ)
+#define DCHSPTR *(handle->SPTR)
+#define DCHDPTR *(handle->DPTR)
+#define DCHCPTR *(handle->CPTR)
+#define DCHDAT *(handle->DAT)
+
+typedef union {
+    struct {
+      uint32_t CHPRI:2;
+      uint32_t CHEDET:1;
+      uint32_t :1;
+      uint32_t CHAEN:1;
+      uint32_t CHCHN:1;
+      uint32_t CHAED:1;
+      uint32_t CHEN:1;
+      uint32_t CHCHNS:1;
+      uint32_t :2;
+      uint32_t CHPATLEN:1;
+      uint32_t :1;
+      uint32_t CHPIGNEN:1;
+      uint32_t :1;
+      uint32_t CHBUSY:1;
+      uint32_t :8;
+      uint32_t CHPIGN:8;
+    };
+    struct {
+      uint32_t w:32;
+    };
+} DCHxCON_t;
+
+typedef union {
+    struct {
+      uint32_t :3;
+      uint32_t AIRQEN:1;
+      uint32_t SIRQEN:1;
+      uint32_t PATEN:1;
+      uint32_t CABORT:1;
+      uint32_t CFORCE:1;
+      uint32_t CHSIRQ:8;
+      uint32_t CHAIRQ:8;
+    };
+    struct {
+      uint32_t w:32;
+    };
+} DCHxECON_t;
+
+typedef union {
+    struct {
+      uint32_t CHERIF:1;
+      uint32_t CHTAIF:1;
+      uint32_t CHCCIF:1;
+      uint32_t CHBCIF:1;
+      uint32_t CHDHIF:1;
+      uint32_t CHDDIF:1;
+      uint32_t CHSHIF:1;
+      uint32_t CHSDIF:1;
+      uint32_t :8;
+      uint32_t CHERIE:1;
+      uint32_t CHTAIE:1;
+      uint32_t CHCCIE:1;
+      uint32_t CHBCIE:1;
+      uint32_t CHDHIE:1;
+      uint32_t CHDDIE:1;
+      uint32_t CHSHIE:1;
+      uint32_t CHSDIE:1;
+    };
+    struct {
+      uint32_t w:32;
+    };
+} DCHxINT_t;
+
+struct __DMA_Descriptor__{
+    volatile DCHxCON_t  *   CON;
+    volatile DCHxECON_t *   ECON;
+    volatile uint32_t   *   ECONSET;
+    volatile DCHxINT_t  *   INT;
+    
+    volatile uint32_t   *   SSA;
+    volatile uint32_t   *   DSA;
+    
+    volatile uint32_t   *   SSIZ;
+    volatile uint32_t   *   DSIZ;
+    volatile uint32_t   *   CSIZ;
+    
+    volatile uint32_t   *   SPTR;
+    volatile uint32_t   *   DPTR;
+    volatile uint32_t   *   CPTR;
+    
+    volatile uint32_t   *   DAT;
+    
+    uint32_t                moduleID;
+};
+
+#if defined(DCH7CON)
+#define DMA_CHANNELCOUNT 8
+#elif defined(DCH6CON)
+#define DMA_CHANNELCOUNT 7
+#elif defined(DCH5CON)
+#define DMA_CHANNELCOUNT 6
+#elif defined(DCH4CON)
+#define DMA_CHANNELCOUNT 5
+#elif defined(DCH3CON)
+#define DMA_CHANNELCOUNT 4
+#elif defined(DCH2CON)
+#define DMA_CHANNELCOUNT 3
+#elif defined(DCH1CON)
+#define DMA_CHANNELCOUNT 2
+#elif defined(DCH0CON)
+#define DMA_CHANNELCOUNT 1
+#else
+#error No DMA Channels available on this device!
 #endif
 
-#include "integer.h"
-#include "SPI.h"
-
-
-/* Status of Disk Functions */
-typedef BYTE DSTATUS;
-
-/* Results of Disk Functions */
-typedef enum {
-	RES_OK = 0,		/* 0: Successful */
-	RES_ERROR,		/* 1: R/W Error */
-	RES_WRPRT,		/* 2: Write Protected */
-	RES_NOTRDY,		/* 3: Not Ready */
-	RES_PARERR		/* 4: Invalid Parameter */
-} DRESULT;
-
-
-/*---------------------------------------*/
-/* Prototypes for disk control functions */
-
-void    disk_setSPIHandle(SPI_HANDLE * handle);
-DSTATUS disk_initialize (BYTE drv);
-DSTATUS disk_status (BYTE pdrv);
-DRESULT disk_read (BYTE pdrv, BYTE* buff, DWORD sector, UINT count);
-DRESULT disk_write (BYTE pdrv, const BYTE* buff, DWORD sector, UINT count);
-DRESULT disk_ioctl (BYTE pdrv, BYTE cmd, void* buff);
-
-
-/* Disk Status Bits (DSTATUS) */
-
-#define STA_NOINIT		0x01	/* Drive not initialized */
-#define STA_NODISK		0x02	/* No medium in the drive */
-#define STA_PROTECT		0x04	/* Write protected */
-
-
-/* Command code for disk_ioctrl fucntion */
-#define _READONLY 0
-/* Generic command (Used by FatFs) */
-#define CTRL_SYNC			0	/* Complete pending write process (needed at FF_FS_READONLY == 0) */
-#define GET_SECTOR_COUNT	1	/* Get media size (needed at FF_USE_MKFS == 1) */
-#define GET_SECTOR_SIZE		2	/* Get sector size (needed at FF_MAX_SS != FF_MIN_SS) */
-#define GET_BLOCK_SIZE		3	/* Get erase block size (needed at FF_USE_MKFS == 1) */
-#define CTRL_TRIM			4	/* Inform device that the data on the block of sectors is no longer used (needed at FF_USE_TRIM == 1) */
-
-/* Generic command (Not used by FatFs) */
-#define CTRL_POWER			5	/* Get/Set power status */
-#define CTRL_LOCK			6	/* Lock/Unlock media removal */
-#define CTRL_EJECT			7	/* Eject media */
-#define CTRL_FORMAT			8	/* Create physical format on the media */
-
-/* MMC/SDC specific ioctl command */
-#define MMC_GET_TYPE		10	/* Get card type */
-#define MMC_GET_CSD			11	/* Get CSD */
-#define MMC_GET_CID			12	/* Get CID */
-#define MMC_GET_OCR			13	/* Get OCR */
-#define MMC_GET_SDSTAT		14	/* Get SD status */
-#define ISDIO_READ			55	/* Read data form SD iSDIO register */
-#define ISDIO_WRITE			56	/* Write data to SD iSDIO register */
-#define ISDIO_MRITE			57	/* Masked write data to SD iSDIO register */
-
-/* ATA/CF specific ioctl command */
-#define ATA_GET_REV			20	/* Get F/W revision */
-#define ATA_GET_MODEL		21	/* Get model name */
-#define ATA_GET_SN			22	/* Get serial number */
-
-/* MMC card type flags (MMC_GET_TYPE) */
-#define CT_MMC		0x01		/* MMC ver 3 */
-#define CT_SD1		0x02		/* SD ver 1 */
-#define CT_SD2		0x04		/* SD ver 2 */
-#define CT_SDC		(CT_SD1|CT_SD2)	/* SD */
-#define CT_BLOCK	0x08		/* Block addressing */
-
-#ifdef __cplusplus
-}
-#endif
+extern uint32_t DMA_available[];
 
 #endif
