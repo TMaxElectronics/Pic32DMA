@@ -3,7 +3,16 @@
 
 #include <xc.h>
 
+#define DMA_ALL_IF _DCH0INT_CHSHIF_MASK | _DCH0INT_CHSHIF_MASK | _DCH0INT_CHDDIF_MASK | _DCH0INT_CHDHIF_MASK | _DCH0INT_CHBCIF_MASK | _DCH0INT_CHCCIF_MASK | _DCH0INT_CHTAIF_MASK | _DCH0INT_CHERIF_MASK
+
 typedef struct __DMA_Descriptor__ DMA_HANDLE_t;
+typedef void (* DMAIRQHandler_t)(uint32_t evt, void * data);
+
+typedef struct{
+    DMAIRQHandler_t    handler;
+    void            *  data;
+    DMA_HANDLE_t    *  handle;
+} DMAISR_t;
 
 extern inline uint32_t DMA_isBusy(DMA_HANDLE_t * handle);
 extern inline uint32_t DMA_readISRFlags(DMA_HANDLE_t * handle);
@@ -13,10 +22,13 @@ extern inline void DMA_setEnabled(DMA_HANDLE_t * handle, uint32_t en);
 
 extern inline void DMA_forceTransfer(DMA_HANDLE_t * handle);
 extern inline void DMA_abortTransfer(DMA_HANDLE_t * handle);
+extern inline void DMA_clearGloablIF(DMA_HANDLE_t * handle);
+extern inline void DMA_clearIF(DMA_HANDLE_t * handle, uint32_t mask);
 
+uint32_t DMA_setIRQHandler(DMA_HANDLE_t * handle, DMAIRQHandler_t handlerFunction, void * data);
 
-uint32_t DMA_setSrcConfig(DMA_HANDLE_t * handle, uint32_t * src, int32_t size);
-uint32_t DMA_setDestConfig(DMA_HANDLE_t * handle, uint32_t * dest, int32_t size);
+uint32_t DMA_setSrcConfig(DMA_HANDLE_t * handle, uint32_t * src, uint32_t size);
+uint32_t DMA_setDestConfig(DMA_HANDLE_t * handle, uint32_t * dest, uint32_t size);
 
 uint32_t DMA_setTransferAttributes(DMA_HANDLE_t * handle, int32_t cellSize, int32_t startISR, int32_t abortISR);
 
@@ -33,6 +45,7 @@ uint32_t DMA_freeChannel(DMA_HANDLE_t * handle);
 #define DCHECONbits (*handle->ECON)
 #define DCHINT  handle->INT->w
 #define DCHINTbits (*handle->INT)
+#define DCHINTCLR  *(handle->INTCLR)
 
 #define DCHSSA  *(handle->SSA)
 #define DCHDSA  *(handle->DSA)
@@ -114,6 +127,7 @@ struct __DMA_Descriptor__{
     volatile DCHxECON_t *   ECON;
     volatile uint32_t   *   ECONSET;
     volatile DCHxINT_t  *   INT;
+    volatile uint32_t   *   INTCLR;
     
     volatile uint32_t   *   SSA;
     volatile uint32_t   *   DSA;
@@ -128,7 +142,10 @@ struct __DMA_Descriptor__{
     
     volatile uint32_t   *   DAT;
     
+    volatile uint32_t   *   IECREG;
+    
     uint32_t                moduleID;
+    uint32_t                iecMask;
 };
 
 #if defined(DCH7CON)
