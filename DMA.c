@@ -7,6 +7,7 @@
 #include "FreeRTOSConfig.h"
 #include "FreeRTOS.h"
 #include "DMA.h"
+#include "../DMAconfig.h"
 
 uint32_t DMA_available[DMA_CHANNELCOUNT] = {[0 ... (DMA_CHANNELCOUNT-1)] = 1};
 DMAISR_t DMA_irqHandler[DMA_CHANNELCOUNT] = {[0 ... (DMA_CHANNELCOUNT-1)].handler = NULL, [0 ... (DMA_CHANNELCOUNT-1)].handle = NULL};
@@ -186,11 +187,11 @@ static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch){
 
             handle->DAT = &DCH0DAT;
             
-            handle->IECREG = &IEC4;
-            handle->iecMask = _IEC4_DMA0IE_MASK;
+            handle->IECREG = &DMA_IEC;
+            handle->iecMask = DMA_IEC_BASEMASK << 0;
             
-            IPC33bits.DMA0IP = 4;
-            IPC33bits.DMA0IS = 3;
+            DMA_IPC_CH0 = 4;
+            DMA_ISPC_CH0 = 3;
             
             return 1;
 #endif
@@ -215,11 +216,11 @@ static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch){
 
             handle->DAT = &DCH1DAT;
             
-            handle->IECREG = &IEC4;
-            handle->iecMask = _IEC4_DMA1IE_MASK;
+            handle->IECREG = &DMA_IEC;
+            handle->iecMask = DMA_IEC_BASEMASK << 1;
             
-            IPC33bits.DMA1IP = 4;
-            IPC33bits.DMA1IS = 3;
+            DMA_IPC_CH1 = 4;
+            DMA_ISPC_CH1 = 3;
             return 1;
 #endif
 #ifdef DCH2CON
@@ -243,11 +244,11 @@ static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch){
 
             handle->DAT = &DCH2DAT;
             
-            handle->IECREG = &IEC4;
-            handle->iecMask = _IEC4_DMA2IE_MASK;
+            handle->IECREG = &DMA_IEC;
+            handle->iecMask = DMA_IEC_BASEMASK << 2;
             
-            IPC34bits.DMA2IP = 4;
-            IPC34bits.DMA2IS = 3;
+            DMA_IPC_CH2 = 4;
+            DMA_ISPC_CH2 = 3;
             return 1;
 #endif
 #ifdef DCH3CON
@@ -271,11 +272,11 @@ static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch){
 
             handle->DAT = &DCH3DAT;
             
-            handle->IECREG = &IEC4;
-            handle->iecMask = _IEC4_DMA3IE_MASK;
+            handle->IECREG = &DMA_IEC;
+            handle->iecMask = DMA_IEC_BASEMASK << 3;
             
-            IPC34bits.DMA3IP = 4;
-            IPC34bits.DMA3IS = 3;
+            DMA_IPC_CH3 = 4;
+            DMA_ISPC_CH3 = 3;
             return 1;
 #endif
 #ifdef DCH4CON
@@ -300,10 +301,10 @@ static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch){
             handle->DAT = &DCH4DAT;
             
             handle->IECREG = &IEC4;
-            handle->iecMask = _IEC4_DMA4IE_MASK;
+            handle->iecMask = DMA_IEC_BASEMASK << 4;
             
-            IPC34bits.DMA4IP = 4;
-            IPC34bits.DMA4IS = 3;
+            DMA_IPC_CH4 = 4;
+            DMA_ISPC_CH4 = 3;
             return 1;
 #endif
 #ifdef DCH5CON
@@ -328,10 +329,10 @@ static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch){
             handle->DAT = &DCH5DAT;
             
             handle->IECREG = &IEC4;
-            handle->iecMask = _IEC4_DMA5IE_MASK;
+            handle->iecMask = DMA_IEC_BASEMASK << 5;
             
-            IPC34bits.DMA5IP = 4;
-            IPC34bits.DMA5IS = 3;
+            DMA_IPC_CH5 = 4;
+            DMA_ISPC_CH5 = 3;
             return 1;
 #endif
 #ifdef DCH6CON
@@ -356,10 +357,10 @@ static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch){
             handle->DAT = &DCH6DAT;
             
             handle->IECREG = &IEC4;
-            handle->iecMask = _IEC4_DMA6IE_MASK;
+            handle->iecMask = DMA_IEC_BASEMASK << 6;
             
-            IPC35bits.DMA6IP = 4;
-            IPC35bits.DMA6IS = 3;
+            DMA_IPC_CH6 = 4;
+            DMA_ISPC_CH6 = 3;
             return 1;
 #endif
 #ifdef DCH7CON
@@ -384,10 +385,10 @@ static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch){
             handle->DAT = &DCH7DAT;
             
             handle->IECREG = &IEC4;
-            handle->iecMask = _IEC4_DMA7IE_MASK;
+            handle->iecMask = DMA_IEC_BASEMASK << 7;
             
-            IPC35bits.DMA7IP = 4;
-            IPC35bits.DMA7IS = 3;
+            DMA_IPC_CH7 = 4;
+            DMA_ISPC_CH7 = 3;
             return 1;
 #endif
         default:
@@ -396,7 +397,7 @@ static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch){
 }
 
 inline void DMA_clearGloablIF(DMA_HANDLE_t * handle){
-    IFS4CLR = _IFS4_DMA0IF_MASK | _IFS4_DMA1IF_MASK | _IFS4_DMA2IF_MASK | _IFS4_DMA3IF_MASK | _IFS4_DMA4IF_MASK | _IFS4_DMA5IF_MASK | _IFS4_DMA6IF_MASK | _IFS4_DMA7IF_MASK;
+    DMA_IFSCLR = handle->iecMask;
 }
 
 inline void DMA_clearIF(DMA_HANDLE_t * handle, uint32_t mask){
@@ -423,58 +424,74 @@ inline void DMA_abortTransfer(DMA_HANDLE_t * handle){
     DCHECONSET = _DCH0ECON_CABORT_MASK;
 }
 
+#ifdef DCH0CON
 void __ISR(_DMA0_VECTOR) DMA0ISR(){
-    IFS4CLR = _IFS4_DMA0IF_MASK;
+    DMA_IFSCLR = _IFS1_DMA0IF_MASK << 0;
     if(DMA_irqHandler[0].handler != NULL){
         (*(DMA_irqHandler[0].handler))(DCH0INT, DMA_irqHandler[0].data);
     }
 }
+#endif
 
+#ifdef DCH1CON
 void __ISR(_DMA1_VECTOR) DMA1ISR(){
-    IFS4CLR = _IFS4_DMA1IF_MASK;
+    DMA_IFSCLR = _IFS1_DMA0IF_MASK << 1;
     if(DMA_irqHandler[1].handler != NULL){
         (*(DMA_irqHandler[1].handler))(DCH1INT, DMA_irqHandler[1].data);
     }
 }
+#endif
 
+#ifdef DCH2CON
 void __ISR(_DMA2_VECTOR) DMA2ISR(){
-    IFS4CLR = _IFS4_DMA2IF_MASK;
+    DMA_IFSCLR = _IFS1_DMA0IF_MASK << 2;
     if(DMA_irqHandler[2].handler != NULL){
         (*(DMA_irqHandler[2].handler))(DCH2INT, DMA_irqHandler[2].data);
     }
 }
+#endif
 
+#ifdef DCH3CON
 void __ISR(_DMA3_VECTOR) DMA3ISR(){
-    IFS4CLR = _IFS4_DMA3IF_MASK;
+    DMA_IFSCLR = _IFS1_DMA0IF_MASK << 3;
     if(DMA_irqHandler[3].handler != NULL){
         (*(DMA_irqHandler[3].handler))(DCH3INT, DMA_irqHandler[3].data);
     }
 }
+#endif
 
+#ifdef DCH4CON
 void __ISR(_DMA4_VECTOR) DMA4ISR(){
-    IFS4CLR = _IFS4_DMA4IF_MASK;
+    DMA_IFSCLR = _IFS1_DMA0IF_MASK << 4;
     if(DMA_irqHandler[4].handler != NULL){
         (*(DMA_irqHandler[4].handler))(DCH4INT, DMA_irqHandler[4].data);
     }
 }
+#endif
 
+#ifdef DCH5CON
 void __ISR(_DMA5_VECTOR) DMA5ISR(){
-    IFS4CLR = _IFS4_DMA5IF_MASK;
+    DMA_IFSCLR = _IFS1_DMA0IF_MASK << 5;
     if(DMA_irqHandler[5].handler != NULL){
         (*(DMA_irqHandler[5].handler))(DCH5INT, DMA_irqHandler[5].data);
     }
 }
+#endif
 
+#ifdef DCH6CON
 void __ISR(_DMA6_VECTOR) DMA6ISR(){
-    IFS4CLR = _IFS4_DMA6IF_MASK;
+    DMA_IFSCLR = _IFS1_DMA0IF_MASK << 6;
     if(DMA_irqHandler[6].handler != NULL){
         (*(DMA_irqHandler[6].handler))(DCH6INT, DMA_irqHandler[6].data);
     }
 }
+#endif
 
+#ifdef DCH7CON
 void __ISR(_DMA7_VECTOR) DMA7ISR(){
-    IFS4CLR = _IFS4_DMA7IF_MASK;
+    DMA_IFSCLR = _IFS1_DMA0IF_MASK << 7;
     if(DMA_irqHandler[7].handler != NULL){
         (*(DMA_irqHandler[7].handler))(DCH7INT, DMA_irqHandler[7].data);
     }
 }
+#endif
