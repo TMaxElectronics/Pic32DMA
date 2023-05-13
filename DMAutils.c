@@ -10,7 +10,6 @@
 #include "../DMAconfig.h"
 #include "System.h"
 
-
 DMA_RINGBUFFERHANDLE_t * DMA_createRingBuffer(uint32_t bufferSize, uint32_t dataSize, uint32_t * dataSrc, uint32_t dataReadyInt, uint32_t prio, uint32_t direction){
     DMA_RINGBUFFERHANDLE_t * ret = pvPortMalloc(sizeof(DMA_RINGBUFFERHANDLE_t));
     
@@ -29,17 +28,17 @@ DMA_RINGBUFFERHANDLE_t * DMA_createRingBuffer(uint32_t bufferSize, uint32_t data
     DMA_setChannelAttributes(ret->channelHandle, 0, 0, 0, 1, prio);
     DMA_setInterruptConfig(ret->channelHandle, 0,0,0,0,0,0,0,0);
     DMA_setTransferAttributes(ret->channelHandle, dataSize, dataReadyInt, -1);
-        
+    
+    ret->data = SYS_makeCoherent(pvPortMalloc(bufferSize));
+    
     if(direction == RINGBUFFER_DIRECTION_RX){
     
         DMA_setSrcConfig(ret->channelHandle, dataSrc, dataSize);
-        ret->data = SYS_makeCoherent(pvPortMalloc(bufferSize));
         DMA_setDestConfig(ret->channelHandle, ret->data, bufferSize);
         
     }else if(direction == RINGBUFFER_DIRECTION_TX){
         
         DMA_setDestConfig(ret->channelHandle, dataSrc, dataSize);
-        ret->data = SYS_makeCoherent(pvPortMalloc(bufferSize));
         DMA_setSrcConfig(ret->channelHandle, ret->data, bufferSize);
         
     }else{
@@ -47,6 +46,9 @@ DMA_RINGBUFFERHANDLE_t * DMA_createRingBuffer(uint32_t bufferSize, uint32_t data
         vPortFree(ret);
         return NULL;
     }
+    
+    //and finally enable the DMA channel
+    //DMA_setEnabled(ret->channelHandle, 1);
     
     return ret;
 }
@@ -77,7 +79,7 @@ uint32_t DMA_RB_available(DMA_RINGBUFFERHANDLE_t * handle){
     }
 }
 
-uint32_t DMA_RB_read(DMA_RINGBUFFERHANDLE_t * handle, uint32_t * dst, uint32_t size){
+uint32_t DMA_RB_read(DMA_RINGBUFFERHANDLE_t * handle, uint8_t * dst, uint32_t size){
     if(handle->direction != RINGBUFFER_DIRECTION_RX) return 0;
     
     uint32_t available = DMA_RB_available(handle);
@@ -92,7 +94,7 @@ uint32_t DMA_RB_read(DMA_RINGBUFFERHANDLE_t * handle, uint32_t * dst, uint32_t s
     return size;
 }
 
-uint32_t DMA_RB_write(DMA_RINGBUFFERHANDLE_t * handle, uint32_t * src, uint32_t size){
+uint32_t DMA_RB_write(DMA_RINGBUFFERHANDLE_t * handle, uint8_t * src, uint32_t size){
     if(handle->direction != RINGBUFFER_DIRECTION_TX) return 0;
     uint32_t available = handle->bufferSize - 1 - DMA_RB_available(handle);
     if(size > available) size = available;
