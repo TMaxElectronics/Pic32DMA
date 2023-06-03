@@ -48,7 +48,7 @@ DMA_RINGBUFFERHANDLE_t * DMA_createRingBuffer(uint32_t bufferSize, uint32_t data
     }
     
     //and finally enable the DMA channel
-    //DMA_setEnabled(ret->channelHandle, 1);
+    DMA_setEnabled(ret->channelHandle, 1);
     
     return ret;
 }
@@ -61,6 +61,9 @@ void DMA_freeRingBuffer(DMA_RINGBUFFERHANDLE_t * handle){
     vPortFree(SYS_makeNonCoherent(handle->data));
     vPortFree(handle);
 }
+
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
 
 //returns either the amount of data available for reading out of amount of data available for the dma to write to the target
 uint32_t DMA_RB_available(DMA_RINGBUFFERHANDLE_t * handle){
@@ -93,6 +96,8 @@ uint32_t DMA_RB_read(DMA_RINGBUFFERHANDLE_t * handle, uint8_t * dst, uint32_t si
     
     return size;
 }
+
+#pragma GCC pop_options
 
 uint32_t DMA_RB_write(DMA_RINGBUFFERHANDLE_t * handle, uint8_t * src, uint32_t size){
     if(handle->direction != RINGBUFFER_DIRECTION_TX) return 0;

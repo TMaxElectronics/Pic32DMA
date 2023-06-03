@@ -6,7 +6,7 @@
 #define DMA_ISR_DISABLED -1
 #define DMA_ALL_IF _DCH0INT_CHSHIF_MASK | _DCH0INT_CHSHIF_MASK | _DCH0INT_CHDDIF_MASK | _DCH0INT_CHDHIF_MASK | _DCH0INT_CHBCIF_MASK | _DCH0INT_CHCCIF_MASK | _DCH0INT_CHTAIF_MASK | _DCH0INT_CHERIF_MASK
 
-typedef struct __DMA_Descriptor__ DMA_HANDLE_t;
+typedef volatile struct __DMA_Descriptor__ DMA_HANDLE_t;
 typedef void (* DMAIRQHandler_t)(uint32_t evt, void * data);
 
 typedef struct{
