@@ -7,7 +7,7 @@
 #include "FreeRTOSConfig.h"
 #include "FreeRTOS.h"
 #include "DMA.h"
-#include "../DMAconfig.h"
+#include "DMAconfig.h"
 
 uint32_t DMA_available[DMA_CHANNELCOUNT] = {[0 ... (DMA_CHANNELCOUNT-1)] = 1};
 DMAISR_t DMA_irqHandler[DMA_CHANNELCOUNT] = {[0 ... (DMA_CHANNELCOUNT-1)].handler = NULL, [0 ... (DMA_CHANNELCOUNT-1)].handle = NULL};

@@ -7,7 +7,7 @@
 #include "FreeRTOS.h"
 #include "stream_buffer.h"
 #include "DMAutils.h"
-#include "../DMAconfig.h"
+#include "DMAconfig.h"
 #include "System.h"
 
 DMA_RINGBUFFERHANDLE_t * DMA_createRingBuffer(uint32_t bufferSize, uint32_t dataSize, uint32_t * dataSrc, uint32_t dataReadyInt, uint32_t prio, uint32_t direction){
