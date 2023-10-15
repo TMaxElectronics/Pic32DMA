@@ -15,26 +15,22 @@ DMAISR_t DMA_irqHandler[DMA_CHANNELCOUNT] = {[0 ... (DMA_CHANNELCOUNT-1)].handle
 static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch);
 
 uint32_t DMA_setIRQHandler(DMA_HANDLE_t * handle, DMAIRQHandler_t handlerFunction, void * data){
-    if(!handle) return;
     DMA_irqHandler[handle->moduleID].handler = handlerFunction;
     DMA_irqHandler[handle->moduleID].data = data;
     DMA_setInterruptConfig(handle, -1, -1, -1, -1, -1, -1, -1, -1); //update IEC register without changing any module enables
 }
 
 uint32_t DMA_setSrcConfig(DMA_HANDLE_t * handle, uint32_t * src, uint32_t size){
-    if(!handle) return;
     DCHSSA = KVA_TO_PA(src);
     DCHSSIZ = size;
 }
 
 uint32_t DMA_setDestConfig(DMA_HANDLE_t * handle, uint32_t * dest, uint32_t size){
-    if(!handle) return;
     DCHDSA = KVA_TO_PA(dest);
     DCHDSIZ = size;
 }
 
 uint32_t DMA_setTransferAttributes(DMA_HANDLE_t * handle, int32_t cellSize, int32_t startISR, int32_t abortISR){
-    if(!handle) return;
     if(cellSize != -1){
         DCHCSIZ = cellSize;
     }
@@ -61,7 +57,6 @@ uint32_t DMA_setTransferAttributes(DMA_HANDLE_t * handle, int32_t cellSize, int3
 }
 
 uint32_t DMA_setChannelAttributes(DMA_HANDLE_t * handle, int32_t enableChaining, int32_t chainDir, int32_t evtIfDisabled, int32_t autoEn, int32_t prio){
-    if(!handle) return;
     uint32_t temp = DCHCON;
     if(enableChaining != -1){
         if(enableChaining) temp |= _DCH0CON_CHCHN_MASK; else temp &= ~_DCH0CON_CHCHN_MASK;
@@ -86,7 +81,6 @@ uint32_t DMA_setChannelAttributes(DMA_HANDLE_t * handle, int32_t enableChaining,
 
 uint32_t DMA_setInterruptConfig(DMA_HANDLE_t * handle, int32_t srcDoneEN, int32_t srcHalfEmptyEN, int32_t dstDoneEN, 
                                         int32_t dstHalfFullEN, int32_t blockDoneEN, int32_t cellDoneEN, int32_t abortEN, int32_t errorEN){
-    if(!handle) return;
     uint32_t temp = DCHINT;
     
     if(srcDoneEN != -1){
@@ -152,7 +146,6 @@ DMA_HANDLE_t * DMA_allocateChannel(){
 }
 
 uint32_t DMA_freeChannel(DMA_HANDLE_t * handle){
-    if(!handle) return;
     //abort also clears CHEN
     DMA_abortTransfer(handle);
     
@@ -196,6 +189,7 @@ static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch){
             
             handle->IECREG = &DMA_IEC;
             handle->iecMask = DMA_IEC_BASEMASK << 0;
+            handle->isrNumber = _DMA0_IRQ;
             
             DMA_IPC_CH0 = 4;
             DMA_ISPC_CH0 = 3;
@@ -225,6 +219,7 @@ static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch){
             
             handle->IECREG = &DMA_IEC;
             handle->iecMask = DMA_IEC_BASEMASK << 1;
+            handle->isrNumber = _DMA1_IRQ;
             
             DMA_IPC_CH1 = 4;
             DMA_ISPC_CH1 = 3;
@@ -253,6 +248,7 @@ static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch){
             
             handle->IECREG = &DMA_IEC;
             handle->iecMask = DMA_IEC_BASEMASK << 2;
+            handle->isrNumber = _DMA2_IRQ;
             
             DMA_IPC_CH2 = 4;
             DMA_ISPC_CH2 = 3;
@@ -281,6 +277,7 @@ static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch){
             
             handle->IECREG = &DMA_IEC;
             handle->iecMask = DMA_IEC_BASEMASK << 3;
+            handle->isrNumber = _DMA3_IRQ;
             
             DMA_IPC_CH3 = 4;
             DMA_ISPC_CH3 = 3;
@@ -428,7 +425,6 @@ inline void DMA_forceTransfer(DMA_HANDLE_t * handle){
 }
 
 inline void DMA_abortTransfer(DMA_HANDLE_t * handle){
-    if(handle != NULL);
     DCHECONSET = _DCH0ECON_CABORT_MASK;
 }
 

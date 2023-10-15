@@ -147,6 +147,7 @@ struct __DMA_Descriptor__{
     
     uint32_t                moduleID;
     uint32_t                iecMask;
+    uint32_t                isrNumber;
 };
 
 #if defined(DCH7CON)
