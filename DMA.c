@@ -17,7 +17,13 @@ static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch);
 uint32_t DMA_setIRQHandler(DMA_HANDLE_t * handle, DMAIRQHandler_t handlerFunction, void * data){
     DMA_irqHandler[handle->moduleID].handler = handlerFunction;
     DMA_irqHandler[handle->moduleID].data = data;
-    DMA_setInterruptConfig(handle, -1, -1, -1, -1, -1, -1, -1, -1); //update IEC register without changing any module enables
+    
+    //is there a handler registered? If so make sure we actually enable the IRQ
+    if(DMA_irqHandler[handle->moduleID].handler != NULL){
+        *(handle->IECREG) |= handle->iecMask;
+    }else{
+        *(handle->IECREG) &= ~handle->iecMask;
+    }
 }
 
 uint32_t DMA_setSrcConfig(DMA_HANDLE_t * handle, uint32_t * src, uint32_t size){
@@ -48,7 +54,7 @@ uint32_t DMA_setTransferAttributes(DMA_HANDLE_t * handle, int32_t cellSize, int3
     if(abortISR == -1){ //disabled
         temp &= ~_DCH0ECON_AIRQEN_MASK;
     }else{
-        temp |= _DCH0ECON_SIRQEN_MASK;
+        temp |= _DCH0ECON_AIRQEN_MASK;
         temp &= ~_DCH0ECON_CHAIRQ_MASK;
         temp |= abortISR << _DCH0ECON_CHAIRQ_POSITION;
     }
@@ -106,13 +112,6 @@ uint32_t DMA_setInterruptConfig(DMA_HANDLE_t * handle, int32_t srcDoneEN, int32_
     }
     if(errorEN != -1){
         if(errorEN) temp |= _DCH0INT_CHERIE_MASK; else temp &= ~_DCH0INT_CHERIE_MASK;
-    }
-    
-    //is there a handler registered? If so make sure we actually enable the IRQ
-    if(DMA_irqHandler[handle->moduleID].handler != NULL){
-        *(handle->IECREG) |= handle->iecMask;
-    }else{
-        *(handle->IECREG) &= ~handle->iecMask;
     }
     
     DCHINT = temp;
@@ -431,8 +430,11 @@ inline void DMA_abortTransfer(DMA_HANDLE_t * handle){
 #ifdef DCH0CON
 void __ISR(_DMA0_VECTOR) DMA0ISR(){
     DMA_IFSCLR = _IFS1_DMA0IF_MASK << 0;
+    uint32_t evt = DMA_irqHandler[0].handle->INT->w;
+    *(DMA_irqHandler[0].handle->INTCLR) = 0xff;
+    
     if(DMA_irqHandler[0].handler != NULL){
-        (*(DMA_irqHandler[0].handler))(DCH0INT, DMA_irqHandler[0].data);
+        (*(DMA_irqHandler[0].handler))(evt, DMA_irqHandler[0].data);
     }
 }
 #endif
@@ -440,8 +442,11 @@ void __ISR(_DMA0_VECTOR) DMA0ISR(){
 #ifdef DCH1CON
 void __ISR(_DMA1_VECTOR) DMA1ISR(){
     DMA_IFSCLR = _IFS1_DMA0IF_MASK << 1;
+    uint32_t evt = DMA_irqHandler[1].handle->INT->w;
+    *(DMA_irqHandler[1].handle->INTCLR) = 0xff;
+    
     if(DMA_irqHandler[1].handler != NULL){
-        (*(DMA_irqHandler[1].handler))(DCH1INT, DMA_irqHandler[1].data);
+        (*(DMA_irqHandler[1].handler))(evt, DMA_irqHandler[1].data);
     }
 }
 #endif
@@ -449,8 +454,11 @@ void __ISR(_DMA1_VECTOR) DMA1ISR(){
 #ifdef DCH2CON
 void __ISR(_DMA2_VECTOR) DMA2ISR(){
     DMA_IFSCLR = _IFS1_DMA0IF_MASK << 2;
+    uint32_t evt = DMA_irqHandler[2].handle->INT->w;
+    *(DMA_irqHandler[2].handle->INTCLR) = 0xff;
+    
     if(DMA_irqHandler[2].handler != NULL){
-        (*(DMA_irqHandler[2].handler))(DCH2INT, DMA_irqHandler[2].data);
+        (*(DMA_irqHandler[2].handler))(evt, DMA_irqHandler[2].data);
     }
 }
 #endif
@@ -458,8 +466,11 @@ void __ISR(_DMA2_VECTOR) DMA2ISR(){
 #ifdef DCH3CON
 void __ISR(_DMA3_VECTOR) DMA3ISR(){
     DMA_IFSCLR = _IFS1_DMA0IF_MASK << 3;
+    uint32_t evt = DMA_irqHandler[3].handle->INT->w;
+    *(DMA_irqHandler[3].handle->INTCLR) = 0xff;
+    
     if(DMA_irqHandler[3].handler != NULL){
-        (*(DMA_irqHandler[3].handler))(DCH3INT, DMA_irqHandler[3].data);
+        (*(DMA_irqHandler[3].handler))(evt, DMA_irqHandler[3].data);
     }
 }
 #endif

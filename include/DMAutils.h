@@ -7,6 +7,7 @@
 #include <sys/kmem.h>
 
 #include "FreeRTOS.h"
+#include "semphr.h"
 #include "stream_buffer.h"
 #include "DMA.h"
 
@@ -23,6 +24,7 @@ uint32_t DMA_RB_write(DMA_RINGBUFFERHANDLE_t * handle, uint8_t * src, uint32_t s
 uint32_t DMA_RB_read(DMA_RINGBUFFERHANDLE_t * handle, uint8_t * dst, uint32_t size);
 uint32_t DMA_RB_readSB(DMA_RINGBUFFERHANDLE_t * handle, StreamBufferHandle_t buffer, uint32_t size);
 uint32_t DMA_RB_flush(DMA_RINGBUFFERHANDLE_t * handle);
+uint32_t DMA_RB_waitForData(DMA_RINGBUFFERHANDLE_t * handle, uint32_t timeout);
 
 struct __DMA_RingBuffer_Descriptor__{
     DMA_HANDLE_t * channelHandle;
@@ -31,8 +33,12 @@ struct __DMA_RingBuffer_Descriptor__{
     uint32_t lastReadPos;
     uint32_t bufferSize;
     uint32_t dataSize;
+    uint32_t dataReadyInt;
+    uint32_t restartOnError;
     
     uint8_t * data;
+    
+    SemaphoreHandle_t dataSemaphore;
 };
 
 #endif
