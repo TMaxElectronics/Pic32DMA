@@ -5,10 +5,14 @@
 
 #include "DMA.h"
 #include "FreeRTOS.h"
+#include "semphr.h"
 #include "stream_buffer.h"
 #include "DMAutils.h"
 #include "DMAconfig.h"
 #include "System.h"
+
+
+static void DMA_RB_ISR(uint32_t evt, void * data);
 
 DMA_RINGBUFFERHANDLE_t * DMA_createRingBuffer(uint32_t bufferSize, uint32_t dataSize, uint32_t * dataSrc, uint32_t dataReadyInt, uint32_t prio, uint32_t direction){
     DMA_RINGBUFFERHANDLE_t * ret = pvPortMalloc(sizeof(DMA_RINGBUFFERHANDLE_t));
@@ -17,16 +21,20 @@ DMA_RINGBUFFERHANDLE_t * DMA_createRingBuffer(uint32_t bufferSize, uint32_t data
     ret->lastReadPos = 0;
     ret->bufferSize = bufferSize;
     ret->dataSize = dataSize;
+    ret->dataReadyInt = dataReadyInt;
     
     ret->channelHandle = DMA_allocateChannel();
+    
+    ret->dataSemaphore = xSemaphoreCreateBinary();
     
     if(ret->channelHandle == NULL){
         vPortFree(ret);
         return NULL;
     }
         
+    DMA_setIRQHandler(ret->channelHandle, DMA_RB_ISR, ret);
     DMA_setChannelAttributes(ret->channelHandle, 0, 0, 0, 1, prio);
-    DMA_setInterruptConfig(ret->channelHandle, 0,0,0,0,0,0,0,0);
+    DMA_setInterruptConfig(ret->channelHandle, 0,0,0,0,0,0,1,1);
     DMA_setTransferAttributes(ret->channelHandle, dataSize, dataReadyInt, -1);
     
     ret->data = SYS_makeCoherent(pvPortMalloc(bufferSize));
@@ -58,8 +66,41 @@ void DMA_freeRingBuffer(DMA_RINGBUFFERHANDLE_t * handle){
     
     DMA_freeChannel(handle->channelHandle);
     
+    vSemaphoreDelete(handle->dataSemaphore);
+    
     vPortFree(SYS_makeNonCoherent(handle->data));
     vPortFree(handle);
+}
+
+//general ISR for the ringbuffer, reacts to all interrupts triggered by the channel
+void DMA_RB_ISR(uint32_t evt, void * data){
+    DMA_RINGBUFFERHANDLE_t * handle = (DMA_RINGBUFFERHANDLE_t *) data;
+    
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    
+    //check which event happened
+    if((evt & _DCH0INT_CHTAIF_MASK) || (evt & _DCH0INT_CHERIF_MASK)){
+        //transfer aborted or other error => reset data pointers
+        handle->lastReadPos = 0;
+        
+        //now re-enable the channel if desired
+        if(handle->restartOnError) DMA_setEnabled(handle->channelHandle, 1);
+        
+        //now also check if somebody is waiting for data, we should return
+        xSemaphoreGiveFromISR(handle->dataSemaphore, &xHigherPriorityTaskWoken);
+    }
+    
+    if(evt & _DCH0INT_CHCCIF_MASK){
+        //some DMA event just occurred, tell waiting code that it did so
+        xSemaphoreGiveFromISR(handle->dataSemaphore, &xHigherPriorityTaskWoken);
+    }
+
+    portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
+}
+
+void DMA_RB_setAbortIRQ(DMA_RINGBUFFERHANDLE_t * handle, uint32_t abortIrq, uint32_t autoRestart){
+    handle->restartOnError = autoRestart;
+    DMA_setTransferAttributes(handle->channelHandle, handle->dataSize, handle->dataReadyInt, abortIrq);
 }
 
 void DMA_RB_setDataSrc(DMA_RINGBUFFERHANDLE_t * handle, void * newDataSrc){
@@ -165,4 +206,33 @@ uint32_t DMA_RB_flush(DMA_RINGBUFFERHANDLE_t * handle){
     handle->lastReadPos = 0;
     
     if(reEnable) DMA_setEnabled(handle->channelHandle, 1);
+}
+
+uint32_t DMA_RB_waitForData(DMA_RINGBUFFERHANDLE_t * handle, uint32_t timeout){
+    //is there already some data in the buffer?
+    if(DMA_RB_available(handle) > 0) return 1; //yes, just return
+    
+    //no, no data in the buffer at the moment, enable irq
+    DMA_setInterruptConfig(handle->channelHandle, -1, -1, -1, -1, -1, 1, -1, -1);
+    
+    //and finally wait for the irq to be called
+    
+    uint32_t ret = 0;
+    
+    //first take semaphore
+    if(xSemaphoreTake(handle->dataSemaphore, 0)){
+        //check if timeout is reasonable (if its too long we might get stuck if isr somehow isn't called) TODO: evaluate and make it reliable
+        if(timeout > 10000) timeout = 10000;
+        //try to take the semaphore
+        ret = xSemaphoreTake(handle->dataSemaphore, timeout);
+
+    }else; //damn we weren't even able to take it here, something was very wrong. Just reset to default state and return
+    
+    //disable irq
+    DMA_setInterruptConfig(handle->channelHandle, -1, -1, -1, -1, -1, 0, -1, -1);
+
+    //free the semaphore again (even if we didn't get it, just to make sure we won't get locked up)
+    xSemaphoreGive(handle->dataSemaphore);
+        
+    return ret;
 }
