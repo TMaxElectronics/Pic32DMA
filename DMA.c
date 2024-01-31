@@ -89,29 +89,71 @@ uint32_t DMA_setInterruptConfig(DMA_HANDLE_t * handle, int32_t srcDoneEN, int32_
                                         int32_t dstHalfFullEN, int32_t blockDoneEN, int32_t cellDoneEN, int32_t abortEN, int32_t errorEN){
     uint32_t temp = DCHINT;
     
+    //figure out which enable bits need to be changed and which ones left alone
+    //also make sure to also clear the flags of any interrupts that were just enabled 
     if(srcDoneEN != -1){
-        if(srcDoneEN) temp |= _DCH0INT_CHSDIE_MASK; else temp &= ~_DCH0INT_CHSDIE_MASK;
+        if(srcDoneEN){ 
+            temp |= _DCH0INT_CHSDIE_MASK; 
+            temp &= ~_DCH0INT_CHSDIF_MASK;
+        }else{ 
+            temp &= ~_DCH0INT_CHSDIE_MASK;
+        }
     }
     if(srcHalfEmptyEN != -1){
-        if(srcHalfEmptyEN) temp |= _DCH0INT_CHSHIE_MASK; else temp &= ~_DCH0INT_CHSHIE_MASK;
+        if(srcHalfEmptyEN){
+            temp |= _DCH0INT_CHSHIE_MASK; 
+            temp &= ~_DCH0INT_CHSHIF_MASK;
+        }else{ 
+            temp &= ~_DCH0INT_CHSHIE_MASK;
+        }
     }
     if(dstDoneEN != -1){
-        if(dstDoneEN) temp |= _DCH0INT_CHDDIE_MASK; else temp &= ~_DCH0INT_CHDDIE_MASK;
+        if(dstDoneEN){
+            temp |= _DCH0INT_CHDDIE_MASK; 
+            temp &= ~_DCH0INT_CHDDIF_MASK;
+        }else{ 
+            temp &= ~_DCH0INT_CHDDIE_MASK;
+        }
     }
     if(dstHalfFullEN != -1){
-        if(dstHalfFullEN) temp |= _DCH0INT_CHDHIE_MASK; else temp &= ~_DCH0INT_CHDHIE_MASK;
+        if(dstHalfFullEN){
+            temp |= _DCH0INT_CHDHIE_MASK; 
+            temp &= ~_DCH0INT_CHDHIF_MASK;
+        }else{ 
+            temp &= ~_DCH0INT_CHDHIE_MASK;
+        }
     }
     if(blockDoneEN != -1){
-        if(blockDoneEN) temp |= _DCH0INT_CHBCIE_MASK; else temp &= ~_DCH0INT_CHBCIE_MASK;
+        if(blockDoneEN){
+            temp |= _DCH0INT_CHBCIE_MASK; 
+            temp &= ~_DCH0INT_CHBCIF_MASK;
+        }else{ 
+            temp &= ~_DCH0INT_CHBCIE_MASK;
+        }
     }
     if(cellDoneEN != -1){
-        if(cellDoneEN) temp |= _DCH0INT_CHCCIE_MASK; else temp &= ~_DCH0INT_CHCCIE_MASK;
+        if(cellDoneEN){
+            temp |= _DCH0INT_CHCCIE_MASK; 
+            temp &= ~_DCH0INT_CHCCIF_MASK;
+        }else{ 
+            temp &= ~_DCH0INT_CHCCIE_MASK;
+        }
     }
     if(abortEN != -1){
-        if(abortEN) temp |= _DCH0INT_CHTAIE_MASK; else temp &= ~_DCH0INT_CHTAIE_MASK;
+        if(abortEN){
+            temp |= _DCH0INT_CHTAIE_MASK; 
+            temp &= ~_DCH0INT_CHTAIF_MASK;
+        }else{ 
+            temp &= ~_DCH0INT_CHTAIE_MASK;
+        }
     }
     if(errorEN != -1){
-        if(errorEN) temp |= _DCH0INT_CHERIE_MASK; else temp &= ~_DCH0INT_CHERIE_MASK;
+        if(errorEN){
+            temp |= _DCH0INT_CHERIE_MASK; 
+            temp &= ~_DCH0INT_CHERIF_MASK;
+        }else{ 
+            temp &= ~_DCH0INT_CHERIE_MASK;
+        }
     }
     
     DCHINT = temp;
