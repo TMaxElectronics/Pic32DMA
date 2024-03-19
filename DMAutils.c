@@ -108,16 +108,16 @@ void DMA_RB_setDataSrc(DMA_RINGBUFFERHANDLE_t * handle, void * newDataSrc){
     DMA_RB_flush(handle);
 }
 
-//#pragma GCC push_options
-//#pragma GCC optimize ("Os")
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
 
-//returns either the amount of data available for reading out of amount of data available for the dma to write to the target
+//returns either the amount of data available for reading or the of amount of data available for the dma to write to the target
 uint32_t DMA_RB_available(DMA_RINGBUFFERHANDLE_t * handle){
     if(handle->direction == RINGBUFFER_DIRECTION_RX){
         if(*(handle->channelHandle->DPTR) >= handle->lastReadPos){
             return *(handle->channelHandle->DPTR) - handle->lastReadPos;
         }else{
-            return *(handle->channelHandle->DPTR) + handle->bufferSize - handle->lastReadPos;
+            return (*(handle->channelHandle->DPTR) + handle->bufferSize) - handle->lastReadPos;
         }
     }else{
         if(*(handle->channelHandle->DPTR) <= handle->lastReadPos){
@@ -126,6 +126,10 @@ uint32_t DMA_RB_available(DMA_RINGBUFFERHANDLE_t * handle){
             return handle->lastReadPos + handle->bufferSize - *(handle->channelHandle->DPTR);
         }
     }
+}
+
+uint32_t DMA_RB_availableWords(DMA_RINGBUFFERHANDLE_t * handle){
+    return DMA_RB_available(handle) / handle->dataSize;
 }
 
 uint32_t DMA_RB_read(DMA_RINGBUFFERHANDLE_t * handle, uint8_t * dst, uint32_t size){
@@ -140,11 +144,70 @@ uint32_t DMA_RB_read(DMA_RINGBUFFERHANDLE_t * handle, uint8_t * dst, uint32_t si
         if(handle->lastReadPos >= handle->bufferSize) handle->lastReadPos = 0;
     }
     
+    if(size != 24) configASSERT(0);
+    if(currPos != 24) configASSERT(0);
+    
     //return however many bytes were read, even if we stopped reading due to a buffer underflow for some reason
     return currPos;
 }
 
-//#pragma GCC pop_options
+uint32_t DMA_RB_readWords(DMA_RINGBUFFERHANDLE_t * handle, uint8_t * dst, uint32_t size){
+    if(handle->direction != RINGBUFFER_DIRECTION_RX) return 0;
+    
+    //check how many words can actually be read
+    uint32_t available = DMA_RB_available(handle);
+    if(size > (available / handle->dataSize)) size = available / handle->dataSize;
+    if(size == 0){ 
+        return 0;
+    }
+                LATBINV = _LATB_LATB6_MASK;
+                LATBINV = _LATB_LATB6_MASK;
+    
+    //calculate number of bytes needing to be read
+    size *= handle->dataSize;
+    
+    //perform the read
+    uint32_t currPos = 0;
+    while((handle->lastReadPos != *(handle->channelHandle->DPTR)) && (currPos != size)){
+                LATBINV = _LATB_LATB6_MASK;
+                LATBINV = _LATB_LATB6_MASK;
+        dst[currPos++] = handle->data[handle->lastReadPos++];
+        if(handle->lastReadPos >= handle->bufferSize) handle->lastReadPos = 0;
+    }
+    
+    /*if(size != 24) configASSERT(0);
+    if(currPos != 24) configASSERT(0);*/
+    
+    //return however many bytes were read, even if we stopped reading due to a buffer underflow for some reason
+    return currPos / handle->dataSize;
+}
+
+uint32_t DMA_RB_readWordPtr(DMA_RINGBUFFERHANDLE_t * handle, void ** dst){
+    if(handle->direction != RINGBUFFER_DIRECTION_RX) return 0;
+    
+    //check how many words can actually be read
+    uint32_t available = DMA_RB_available(handle);
+    if(available < handle->dataSize) return 0;
+    
+    //check if the buffer is aligned to the buffer boundaries
+    if(handle->lastReadPos + handle->dataSize > handle->bufferSize){
+        //yes, this is shit and needs to be handled somehow. Not that I'd know how right now though lol
+        configASSERT(0);
+    }
+    
+    //forward the pointer
+    *dst = &handle->data[handle->lastReadPos];
+    handle->lastReadPos += handle->dataSize;
+    
+    if(handle->lastReadPos == handle->bufferSize){
+        handle->lastReadPos = 0;
+    }
+    
+    //return however many bytes were read, even if we stopped reading due to a buffer underflow for some reason
+    return 1;
+}
+
+#pragma GCC pop_options
 
 uint32_t DMA_RB_write(DMA_RINGBUFFERHANDLE_t * handle, uint8_t * src, uint32_t size){
     if(handle->direction != RINGBUFFER_DIRECTION_TX) return 0;
