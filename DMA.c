@@ -202,6 +202,22 @@ uint32_t DMA_freeChannel(DMA_HANDLE_t * handle){
     return 1;
 }
 
+//TODO: maybe make this function nestable?
+void DMA_suspendAllTransfers(){
+    //caller wants to force suspend all ongoing transfers (which is for example required for NVM operations)
+    
+    //set suspend bit
+    DMACONSET = _DMACON_SUSPEND_MASK;
+    
+    //wait for any potentially active transfers to complete
+    while(DMACONbits.DMABUSY);
+}
+
+void DMA_resumeTransfers(){
+    //clear dma suspend bit to reenable transfers
+    DMACONCLR = _DMACON_SUSPEND_MASK;
+}
+
 static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch){
     handle->moduleID = ch;
     DMA_irqHandler[handle->moduleID].handle = handle;
