@@ -42,6 +42,9 @@ uint32_t DMA_setInterruptConfig(DmaHandle_t * handle, int32_t srcDoneEN, int32_t
 DmaHandle_t * DMA_allocateChannel();
 uint32_t DMA_freeChannel(DmaHandle_t * handle);
 
+void DMA_suspendAllTransfers();
+void DMA_resumeTransfers();
+
 #define DCHCON  handle->CON->w
 #define DCHCONbits (*handle->CON)
 #define DCHECON handle->ECON->w
