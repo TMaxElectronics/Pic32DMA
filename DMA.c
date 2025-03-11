@@ -12,31 +12,27 @@
 uint32_t DMA_available[DMA_CHANNELCOUNT] = {[0 ... (DMA_CHANNELCOUNT-1)] = 1};
 DMAISR_t DMA_irqHandler[DMA_CHANNELCOUNT] = {[0 ... (DMA_CHANNELCOUNT-1)].handler = NULL, [0 ... (DMA_CHANNELCOUNT-1)].handle = NULL};
 
-static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch);
+static uint32_t populateHandle(DmaHandle_t * handle, uint32_t ch);
 
-uint32_t DMA_setIRQHandler(DMA_HANDLE_t * handle, DMAIRQHandler_t handlerFunction, void * data){
+uint32_t DMA_setIRQHandler(DmaHandle_t * handle, DMAIRQHandler_t handlerFunction, void * data){
     DMA_irqHandler[handle->moduleID].handler = handlerFunction;
     DMA_irqHandler[handle->moduleID].data = data;
     
-    //is there a handler registered? If so make sure we actually enable the IRQ
-    if(DMA_irqHandler[handle->moduleID].handler != NULL){
-        *(handle->IECREG) |= handle->iecMask;
-    }else{
-        *(handle->IECREG) &= ~handle->iecMask;
-    }
+    //was a handler just removed? If so clear the iec bit
+    if(handlerFunction == NULL) DMA_setIRQEnabled(handle, 0);
 }
 
-uint32_t DMA_setSrcConfig(DMA_HANDLE_t * handle, uint32_t * src, uint32_t size){
+uint32_t DMA_setSrcConfig(DmaHandle_t * handle, uint32_t * src, uint32_t size){
     DCHSSA = KVA_TO_PA(src);
     DCHSSIZ = size;
 }
 
-uint32_t DMA_setDestConfig(DMA_HANDLE_t * handle, uint32_t * dest, uint32_t size){
+uint32_t DMA_setDestConfig(DmaHandle_t * handle, uint32_t * dest, uint32_t size){
     DCHDSA = KVA_TO_PA(dest);
     DCHDSIZ = size;
 }
 
-uint32_t DMA_setTransferAttributes(DMA_HANDLE_t * handle, int32_t cellSize, int32_t startISR, int32_t abortISR){
+uint32_t DMA_setTransferAttributes(DmaHandle_t * handle, int32_t cellSize, int32_t startISR, int32_t abortISR){
     if(cellSize != -1){
         DCHCSIZ = cellSize;
     }
@@ -62,7 +58,7 @@ uint32_t DMA_setTransferAttributes(DMA_HANDLE_t * handle, int32_t cellSize, int3
     DCHECON = temp;
 }
 
-uint32_t DMA_setChannelAttributes(DMA_HANDLE_t * handle, int32_t enableChaining, int32_t chainDir, int32_t evtIfDisabled, int32_t autoEn, int32_t prio){
+uint32_t DMA_setChannelAttributes(DmaHandle_t * handle, int32_t enableChaining, int32_t chainDir, int32_t evtIfDisabled, int32_t autoEn, int32_t prio){
     uint32_t temp = DCHCON;
     if(enableChaining != -1){
         if(enableChaining) temp |= _DCH0CON_CHCHN_MASK; else temp &= ~_DCH0CON_CHCHN_MASK;
@@ -85,7 +81,16 @@ uint32_t DMA_setChannelAttributes(DMA_HANDLE_t * handle, int32_t enableChaining,
     DCHCON = temp;
 }
 
-uint32_t DMA_setInterruptConfig(DMA_HANDLE_t * handle, int32_t srcDoneEN, int32_t srcHalfEmptyEN, int32_t dstDoneEN, 
+uint32_t DMA_setIRQEnabled(DmaHandle_t * handle, int32_t enabled){
+    //is there a handler registered? If not we disable the irq no matter what
+    if((DMA_irqHandler[handle->moduleID].handler != NULL) && enabled){
+        *(handle->IECREG) |= handle->iecMask;
+    }else{
+        *(handle->IECREG) &= ~handle->iecMask;
+    }
+}
+
+uint32_t DMA_setInterruptConfig(DmaHandle_t * handle, int32_t srcDoneEN, int32_t srcHalfEmptyEN, int32_t dstDoneEN, 
                                         int32_t dstHalfFullEN, int32_t blockDoneEN, int32_t cellDoneEN, int32_t abortEN, int32_t errorEN){
     uint32_t temp = DCHINT;
     
@@ -159,11 +164,11 @@ uint32_t DMA_setInterruptConfig(DMA_HANDLE_t * handle, int32_t srcDoneEN, int32_
     DCHINT = temp;
 }
 
-inline uint32_t DMA_readISRFlags(DMA_HANDLE_t * handle){
+inline uint32_t DMA_readISRFlags(DmaHandle_t * handle){
     return DCH0INT & 0xff;
 }
 
-DMA_HANDLE_t * DMA_allocateChannel(){
+DmaHandle_t * DMA_allocateChannel(){
     //find a free channel in the channelList
     uint32_t currCh = 0;
     for(; currCh < DMA_CHANNELCOUNT; currCh++){
@@ -175,7 +180,7 @@ DMA_HANDLE_t * DMA_allocateChannel(){
     }
     
     //got number of the new channel, now create handle
-    DMA_HANDLE_t * handle = pvPortMalloc(sizeof(DMA_HANDLE_t));
+    DmaHandle_t * handle = pvPortMalloc(sizeof(DmaHandle_t));
     if(!populateHandle(handle, currCh)){ //no free channel found...
         vPortFree(handle);
         return 0;
@@ -186,7 +191,7 @@ DMA_HANDLE_t * DMA_allocateChannel(){
     return handle;
 }
 
-uint32_t DMA_freeChannel(DMA_HANDLE_t * handle){
+uint32_t DMA_freeChannel(DmaHandle_t * handle){
     //abort also clears CHEN
     DMA_abortTransfer(handle);
     
@@ -202,7 +207,7 @@ uint32_t DMA_freeChannel(DMA_HANDLE_t * handle){
     return 1;
 }
 
-static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch){
+static uint32_t populateHandle(DmaHandle_t * handle, uint32_t ch){
     handle->moduleID = ch;
     DMA_irqHandler[handle->moduleID].handle = handle;
     switch(ch){
@@ -441,31 +446,40 @@ static uint32_t populateHandle(DMA_HANDLE_t * handle, uint32_t ch){
     }
 }
 
-inline void DMA_clearGloablIF(DMA_HANDLE_t * handle){
+
+inline void DMA_getSourcePointerValue(DmaHandle_t * handle){
+    DMA_IFSCLR = *handle->SPTR;
+}
+
+inline void DMA_getDestinationPointerValue(DmaHandle_t * handle){
+    DMA_IFSCLR = *handle->DPTR;
+}
+
+inline void DMA_clearGloablIF(DmaHandle_t * handle){
     DMA_IFSCLR = handle->iecMask;
 }
 
-inline void DMA_clearIF(DMA_HANDLE_t * handle, uint32_t mask){
+inline void DMA_clearIF(DmaHandle_t * handle, uint32_t mask){
     DCHINTCLR = mask;
 }
 
-inline uint32_t DMA_isBusy(DMA_HANDLE_t * handle){
+inline uint32_t DMA_isBusy(DmaHandle_t * handle){
     return DCHCON & _DCH0CON_CHBUSY_MASK;
 }
 
-inline uint32_t DMA_isEnabled(DMA_HANDLE_t * handle){
+inline uint32_t DMA_isEnabled(DmaHandle_t * handle){
     return DCHCON & _DCH0CON_CHEN_MASK;
 }
 
-inline void DMA_setEnabled(DMA_HANDLE_t * handle, uint32_t en){
+inline void DMA_setEnabled(DmaHandle_t * handle, uint32_t en){
     DCHCONbits.CHEN = en;
 }
 
-inline void DMA_forceTransfer(DMA_HANDLE_t * handle){
+inline void DMA_forceTransfer(DmaHandle_t * handle){
     DCHECONSET = _DCH0ECON_CFORCE_MASK;
 }
 
-inline void DMA_abortTransfer(DMA_HANDLE_t * handle){
+inline void DMA_abortTransfer(DmaHandle_t * handle){
     DCHECONSET = _DCH0ECON_CABORT_MASK;
 }
 

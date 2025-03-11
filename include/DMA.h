@@ -3,41 +3,44 @@
 
 #include <xc.h>
 
-#define DMA_ISR_DISABLED -1
+#define DMA_IRQ_DISABLED -1
 #define DMA_ALL_IF _DCH0INT_CHSHIF_MASK | _DCH0INT_CHSHIF_MASK | _DCH0INT_CHDDIF_MASK | _DCH0INT_CHDHIF_MASK | _DCH0INT_CHBCIF_MASK | _DCH0INT_CHCCIF_MASK | _DCH0INT_CHTAIF_MASK | _DCH0INT_CHERIF_MASK
 
-typedef volatile struct __DMA_Descriptor__ DMA_HANDLE_t;
+typedef volatile struct __DMA_Descriptor__ DmaHandle_t;
 typedef void (* DMAIRQHandler_t)(uint32_t evt, void * data);
 
 typedef struct{
     DMAIRQHandler_t    handler;
     void            *  data;
-    DMA_HANDLE_t    *  handle;
+    DmaHandle_t    *  handle;
 } DMAISR_t;
 
-extern inline uint32_t DMA_isBusy(DMA_HANDLE_t * handle);
-extern inline uint32_t DMA_readISRFlags(DMA_HANDLE_t * handle);
+extern inline uint32_t DMA_isBusy(DmaHandle_t * handle);
+extern inline uint32_t DMA_readISRFlags(DmaHandle_t * handle);
 
-extern inline uint32_t DMA_isEnabled(DMA_HANDLE_t * handle);
-extern inline void DMA_setEnabled(DMA_HANDLE_t * handle, uint32_t en);
+extern inline uint32_t DMA_isEnabled(DmaHandle_t * handle);
+extern inline void DMA_setEnabled(DmaHandle_t * handle, uint32_t en);
 
-extern inline void DMA_forceTransfer(DMA_HANDLE_t * handle);
-extern inline void DMA_abortTransfer(DMA_HANDLE_t * handle);
-extern inline void DMA_clearGloablIF(DMA_HANDLE_t * handle);
-extern inline void DMA_clearIF(DMA_HANDLE_t * handle, uint32_t mask);
+extern inline void DMA_forceTransfer(DmaHandle_t * handle);
+extern inline void DMA_abortTransfer(DmaHandle_t * handle);
+extern inline void DMA_clearGloablIF(DmaHandle_t * handle);
+extern inline void DMA_clearIF(DmaHandle_t * handle, uint32_t mask);
+extern inline void DMA_getDestinationPointerValue(DmaHandle_t * handle);
+extern inline void DMA_getSourcePointerValue(DmaHandle_t * handle);
 
-uint32_t DMA_setIRQHandler(DMA_HANDLE_t * handle, DMAIRQHandler_t handlerFunction, void * data);
+uint32_t DMA_setIRQHandler(DmaHandle_t * handle, DMAIRQHandler_t handlerFunction, void * data);
+uint32_t DMA_setIRQEnabled(DmaHandle_t * handle, int32_t enabled);
 
-uint32_t DMA_setSrcConfig(DMA_HANDLE_t * handle, uint32_t * src, uint32_t size);
-uint32_t DMA_setDestConfig(DMA_HANDLE_t * handle, uint32_t * dest, uint32_t size);
+uint32_t DMA_setSrcConfig(DmaHandle_t * handle, uint32_t * src, uint32_t size);
+uint32_t DMA_setDestConfig(DmaHandle_t * handle, uint32_t * dest, uint32_t size);
 
-uint32_t DMA_setTransferAttributes(DMA_HANDLE_t * handle, int32_t cellSize, int32_t startISR, int32_t abortISR);
+uint32_t DMA_setTransferAttributes(DmaHandle_t * handle, int32_t cellSize, int32_t startISR, int32_t abortISR);
 
-uint32_t DMA_setChannelAttributes(DMA_HANDLE_t * handle, int32_t enableChaining, int32_t chainDir, int32_t evtIfDisabled, int32_t autoEn, int32_t prio);
-uint32_t DMA_setInterruptConfig(DMA_HANDLE_t * handle, int32_t srcDoneEN, int32_t srcHalfEmptyEN, int32_t dstDoneEN, int32_t dstHalfFullEN, int32_t blockDoneEN, int32_t cellDoneEN, int32_t abortEN, int32_t errorEN);
+uint32_t DMA_setChannelAttributes(DmaHandle_t * handle, int32_t enableChaining, int32_t chainDir, int32_t evtIfDisabled, int32_t autoEn, int32_t prio);
+uint32_t DMA_setInterruptConfig(DmaHandle_t * handle, int32_t srcDoneEN, int32_t srcHalfEmptyEN, int32_t dstDoneEN, int32_t dstHalfFullEN, int32_t blockDoneEN, int32_t cellDoneEN, int32_t abortEN, int32_t errorEN);
 
-DMA_HANDLE_t * DMA_allocateChannel();
-uint32_t DMA_freeChannel(DMA_HANDLE_t * handle);
+DmaHandle_t * DMA_allocateChannel();
+uint32_t DMA_freeChannel(DmaHandle_t * handle);
 
 #define DCHCON  handle->CON->w
 #define DCHCONbits (*handle->CON)
@@ -57,6 +60,15 @@ uint32_t DMA_freeChannel(DMA_HANDLE_t * handle);
 #define DCHDPTR *(handle->DPTR)
 #define DCHCPTR *(handle->CPTR)
 #define DCHDAT *(handle->DAT)
+
+#define DMA_EVTFLAG_SRC_DONE    0x40
+#define DMA_EVTFLAG_SRC_HALF    0x30
+#define DMA_EVTFLAG_DEST_DONE   0x20
+#define DMA_EVTFLAG_DEST_HALF   0x10
+#define DMA_EVTFLAG_BLOCK_DONE  0x08
+#define DMA_EVTFLAG_CELL_DONE   0x04
+#define DMA_EVTFLAG_ABORTED     0x02
+#define DMA_EVTFLAG_ADDRERR     0x01
 
 typedef union {
     struct {

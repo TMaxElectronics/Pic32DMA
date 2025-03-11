@@ -14,8 +14,8 @@
 
 static void DMA_RB_ISR(uint32_t evt, void * data);
 
-DMA_RINGBUFFERHANDLE_t * DMA_createRingBuffer(uint32_t bufferSize, uint32_t dataSize, uint32_t * dataSrc, uint32_t dataReadyInt, uint32_t prio, uint32_t direction){
-    DMA_RINGBUFFERHANDLE_t * ret = pvPortMalloc(sizeof(DMA_RINGBUFFERHANDLE_t));
+DMA_RingBufferHandle_t * DMA_createRingBuffer(uint32_t bufferSize, uint32_t dataSize, uint32_t * dataSrc, uint32_t dataReadyInt, uint32_t prio, uint32_t direction){
+    DMA_RingBufferHandle_t * ret = pvPortMalloc(sizeof(DMA_RingBufferHandle_t));
     
     ret->direction = direction;
     ret->lastReadPos = 0;
@@ -61,7 +61,7 @@ DMA_RINGBUFFERHANDLE_t * DMA_createRingBuffer(uint32_t bufferSize, uint32_t data
     return ret;
 }
 
-void DMA_freeRingBuffer(DMA_RINGBUFFERHANDLE_t * handle){
+void DMA_freeRingBuffer(DMA_RingBufferHandle_t * handle){
     if(handle == NULL) return;
     
     DMA_freeChannel(handle->channelHandle);
@@ -74,7 +74,7 @@ void DMA_freeRingBuffer(DMA_RINGBUFFERHANDLE_t * handle){
 
 //general ISR for the ringbuffer, reacts to all interrupts triggered by the channel
 void DMA_RB_ISR(uint32_t evt, void * data){
-    DMA_RINGBUFFERHANDLE_t * handle = (DMA_RINGBUFFERHANDLE_t *) data;
+    DMA_RingBufferHandle_t * handle = (DMA_RingBufferHandle_t *) data;
     
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     
@@ -98,12 +98,12 @@ void DMA_RB_ISR(uint32_t evt, void * data){
     portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
 }
 
-void DMA_RB_setAbortIRQ(DMA_RINGBUFFERHANDLE_t * handle, uint32_t abortIrq, uint32_t autoRestart){
+void DMA_RB_setAbortIRQ(DMA_RingBufferHandle_t * handle, uint32_t abortIrq, uint32_t autoRestart){
     handle->restartOnError = autoRestart;
     DMA_setTransferAttributes(handle->channelHandle, handle->dataSize, handle->dataReadyInt, abortIrq);
 }
 
-void DMA_RB_setDataSrc(DMA_RINGBUFFERHANDLE_t * handle, void * newDataSrc){
+void DMA_RB_setDataSrc(DMA_RingBufferHandle_t * handle, void * newDataSrc){
     DMA_setSrcConfig(handle->channelHandle, newDataSrc, handle->bufferSize);
     DMA_RB_flush(handle);
 }
@@ -112,7 +112,7 @@ void DMA_RB_setDataSrc(DMA_RINGBUFFERHANDLE_t * handle, void * newDataSrc){
 #pragma GCC optimize ("Os")
 
 //returns either the amount of data available for reading or the of amount of data available for the dma to write to the target
-uint32_t DMA_RB_available(DMA_RINGBUFFERHANDLE_t * handle){
+uint32_t DMA_RB_available(DMA_RingBufferHandle_t * handle){
     if(handle->direction == RINGBUFFER_DIRECTION_RX){
         if(*(handle->channelHandle->DPTR) >= handle->lastReadPos){
             return *(handle->channelHandle->DPTR) - handle->lastReadPos;
@@ -128,11 +128,11 @@ uint32_t DMA_RB_available(DMA_RINGBUFFERHANDLE_t * handle){
     }
 }
 
-uint32_t DMA_RB_availableWords(DMA_RINGBUFFERHANDLE_t * handle){
+uint32_t DMA_RB_availableWords(DMA_RingBufferHandle_t * handle){
     return DMA_RB_available(handle) / handle->dataSize;
 }
 
-uint32_t DMA_RB_read(DMA_RINGBUFFERHANDLE_t * handle, uint8_t * dst, uint32_t size){
+uint32_t DMA_RB_read(DMA_RingBufferHandle_t * handle, uint8_t * dst, uint32_t size){
     if(handle->direction != RINGBUFFER_DIRECTION_RX) return 0;
     
     uint32_t available = DMA_RB_available(handle);
@@ -151,7 +151,7 @@ uint32_t DMA_RB_read(DMA_RINGBUFFERHANDLE_t * handle, uint8_t * dst, uint32_t si
     return currPos;
 }
 
-uint32_t DMA_RB_readWords(DMA_RINGBUFFERHANDLE_t * handle, uint8_t * dst, uint32_t size){
+uint32_t DMA_RB_readWords(DMA_RingBufferHandle_t * handle, uint8_t * dst, uint32_t size){
     if(handle->direction != RINGBUFFER_DIRECTION_RX) return 0;
     
     //check how many words can actually be read
@@ -182,7 +182,7 @@ uint32_t DMA_RB_readWords(DMA_RINGBUFFERHANDLE_t * handle, uint8_t * dst, uint32
     return currPos / handle->dataSize;
 }
 
-uint32_t DMA_RB_readWordPtr(DMA_RINGBUFFERHANDLE_t * handle, void ** dst){
+uint32_t DMA_RB_readWordPtr(DMA_RingBufferHandle_t * handle, void ** dst){
     if(handle->direction != RINGBUFFER_DIRECTION_RX) return 0;
     
     //check how many words can actually be read
@@ -209,7 +209,7 @@ uint32_t DMA_RB_readWordPtr(DMA_RINGBUFFERHANDLE_t * handle, void ** dst){
 
 #pragma GCC pop_options
 
-uint32_t DMA_RB_write(DMA_RINGBUFFERHANDLE_t * handle, uint8_t * src, uint32_t size){
+uint32_t DMA_RB_write(DMA_RingBufferHandle_t * handle, uint8_t * src, uint32_t size){
     if(handle->direction != RINGBUFFER_DIRECTION_TX) return 0;
     uint32_t available = handle->bufferSize - 1 - DMA_RB_available(handle);
     if(size > available) size = available;
@@ -223,7 +223,7 @@ uint32_t DMA_RB_write(DMA_RINGBUFFERHANDLE_t * handle, uint8_t * src, uint32_t s
     return size;
 }
 
-uint32_t DMA_RB_readSB(DMA_RINGBUFFERHANDLE_t * handle, StreamBufferHandle_t buffer, uint32_t size){
+uint32_t DMA_RB_readSB(DMA_RingBufferHandle_t * handle, StreamBufferHandle_t buffer, uint32_t size){
     if(handle->direction != RINGBUFFER_DIRECTION_RX) return 0;
     
     uint32_t available = DMA_RB_available(handle);
@@ -261,7 +261,7 @@ uint32_t DMA_RB_readSB(DMA_RINGBUFFERHANDLE_t * handle, StreamBufferHandle_t buf
     return bytesWritten;
 }
 
-uint32_t DMA_RB_flush(DMA_RINGBUFFERHANDLE_t * handle){
+uint32_t DMA_RB_flush(DMA_RingBufferHandle_t * handle){
     uint32_t reEnable = 0;
     if(DMA_isEnabled(handle->channelHandle)) reEnable = 1;
     
@@ -271,7 +271,7 @@ uint32_t DMA_RB_flush(DMA_RINGBUFFERHANDLE_t * handle){
     if(reEnable) DMA_setEnabled(handle->channelHandle, 1);
 }
 
-uint32_t DMA_RB_waitForData(DMA_RINGBUFFERHANDLE_t * handle, uint32_t timeout){
+uint32_t DMA_RB_waitForData(DMA_RingBufferHandle_t * handle, uint32_t timeout){
     //is there already some data in the buffer?
     if(DMA_RB_available(handle) > 0) return 1; //yes, just return
     
