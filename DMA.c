@@ -462,42 +462,6 @@ static uint32_t populateHandle(DmaHandle_t * handle, uint32_t ch){
 }
 
 
-inline void DMA_getSourcePointerValue(DmaHandle_t * handle){
-    DMA_IFSCLR = *handle->SPTR;
-}
-
-inline void DMA_getDestinationPointerValue(DmaHandle_t * handle){
-    DMA_IFSCLR = *handle->DPTR;
-}
-
-inline void DMA_clearGloablIF(DmaHandle_t * handle){
-    DMA_IFSCLR = handle->iecMask;
-}
-
-inline void DMA_clearIF(DmaHandle_t * handle, uint32_t mask){
-    DCHINTCLR = mask;
-}
-
-inline uint32_t DMA_isBusy(DmaHandle_t * handle){
-    return DCHCON & _DCH0CON_CHBUSY_MASK;
-}
-
-inline uint32_t DMA_isEnabled(DmaHandle_t * handle){
-    return DCHCON & _DCH0CON_CHEN_MASK;
-}
-
-inline void DMA_setEnabled(DmaHandle_t * handle, uint32_t en){
-    DCHCONbits.CHEN = en;
-}
-
-inline void DMA_forceTransfer(DmaHandle_t * handle){
-    DCHECONSET = _DCH0ECON_CFORCE_MASK;
-}
-
-inline void DMA_abortTransfer(DmaHandle_t * handle){
-    DCHECONSET = _DCH0ECON_CABORT_MASK;
-}
-
 #ifdef DCH0CON
 void __ISR(_DMA0_VECTOR) DMA0ISR(){
     DMA_IFSCLR = _IFS1_DMA0IF_MASK << 0;

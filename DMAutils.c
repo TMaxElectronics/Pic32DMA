@@ -144,9 +144,6 @@ uint32_t DMA_RB_read(DMA_RingBufferHandle_t * handle, uint8_t * dst, uint32_t si
         if(handle->lastReadPos >= handle->bufferSize) handle->lastReadPos = 0;
     }
     
-    if(size != 24) configASSERT(0);
-    if(currPos != 24) configASSERT(0);
-    
     //return however many bytes were read, even if we stopped reading due to a buffer underflow for some reason
     return currPos;
 }
@@ -160,8 +157,6 @@ uint32_t DMA_RB_readWords(DMA_RingBufferHandle_t * handle, uint8_t * dst, uint32
     if(size == 0){ 
         return 0;
     }
-                LATBINV = _LATB_LATB6_MASK;
-                LATBINV = _LATB_LATB6_MASK;
     
     //calculate number of bytes needing to be read
     size *= handle->dataSize;
@@ -169,8 +164,6 @@ uint32_t DMA_RB_readWords(DMA_RingBufferHandle_t * handle, uint8_t * dst, uint32
     //perform the read
     uint32_t currPos = 0;
     while((handle->lastReadPos != *(handle->channelHandle->DPTR)) && (currPos != size)){
-                LATBINV = _LATB_LATB6_MASK;
-                LATBINV = _LATB_LATB6_MASK;
         dst[currPos++] = handle->data[handle->lastReadPos++];
         if(handle->lastReadPos >= handle->bufferSize) handle->lastReadPos = 0;
     }

@@ -2,6 +2,7 @@
 #define DMA_INC
 
 #include <xc.h>
+#include "DMAconfig.h"
 
 #define DMA_IRQ_DISABLED -1
 #define DMA_ALL_IF _DCH0INT_CHSHIF_MASK | _DCH0INT_CHSHIF_MASK | _DCH0INT_CHDDIF_MASK | _DCH0INT_CHDHIF_MASK | _DCH0INT_CHBCIF_MASK | _DCH0INT_CHCCIF_MASK | _DCH0INT_CHTAIF_MASK | _DCH0INT_CHERIF_MASK
@@ -72,6 +73,20 @@ void DMA_resumeTransfers();
 #define DMA_EVTFLAG_CELL_DONE   0x04
 #define DMA_EVTFLAG_ABORTED     0x02
 #define DMA_EVTFLAG_ADDRERR     0x01
+
+#define DMA_getSourcePointerValue(handle) *handle->SPTR
+#define DMA_getDestinationPointerValue(handle) *handle->DPTR
+
+#define DMA_clearGloablIF(handle) DMA_IFSCLR = handle->iecMask
+#define DMA_clearIF(handle, mask) *(handle->INTCLR) = mask
+
+#define DMA_isBusy(handle) (handle->CON->w & _DCH0CON_CHBUSY_MASK)
+
+#define DMA_isEnabled(handle) (handle->CON->w & _DCH0CON_CHEN_MASK)
+#define DMA_setEnabled(handle, en) (*handle->CON).CHEN = en
+
+#define DMA_forceTransfer(handle) *(handle->ECONSET) = _DCH0ECON_CFORCE_MASK
+#define DMA_abortTransfer(handle) *(handle->ECONSET) = _DCH0ECON_CABORT_MASK
 
 typedef union {
     struct {
