@@ -8,6 +8,7 @@
 #define DMA_ALL_IF _DCH0INT_CHSHIF_MASK | _DCH0INT_CHSHIF_MASK | _DCH0INT_CHDDIF_MASK | _DCH0INT_CHDHIF_MASK | _DCH0INT_CHBCIF_MASK | _DCH0INT_CHCCIF_MASK | _DCH0INT_CHTAIF_MASK | _DCH0INT_CHERIF_MASK
 
 typedef volatile struct __DMA_Descriptor__ DmaHandle_t;
+//TODO refactor to also pass along the dma handle
 typedef void (* DMAIRQHandler_t)(uint32_t evt, void * data);
 
 typedef struct{
@@ -60,6 +61,8 @@ void DMA_resumeTransfers();
 #define DMA_EVTFLAG_CELL_DONE   0x04
 #define DMA_EVTFLAG_ABORTED     0x02
 #define DMA_EVTFLAG_ADDRERR     0x01
+
+#define DMA_resetTransfer(handle) handle->SSA = handle->SSA
 
 #define DMA_getSourcePointerValue(handle) *handle->SPTR
 #define DMA_getDestinationPointerValue(handle) *handle->DPTR
@@ -147,8 +150,8 @@ struct __DMA_Descriptor__{
     volatile DCHxINT_t  *   INT;
     volatile uint32_t   *   INTCLR;
     
-    volatile uint32_t   *   SSA;
-    volatile uint32_t   *   DSA;
+    volatile uint32_t   *   volatile SSA;
+    volatile uint32_t   *   volatile DSA;
     
     volatile uint32_t   *   SSIZ;
     volatile uint32_t   *   DSIZ;
