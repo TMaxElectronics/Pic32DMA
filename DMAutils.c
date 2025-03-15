@@ -36,6 +36,7 @@ DMA_RingBufferHandle_t * DMA_createRingBuffer(uint32_t bufferSize, uint32_t data
     DMA_setChannelAttributes(ret->channelHandle, 0, 0, 0, 1, prio);
     DMA_setInterruptConfig(ret->channelHandle, 0,0,0,0,0,0,1,1);
     DMA_setTransferAttributes(ret->channelHandle, dataSize, dataReadyInt, -1);
+    DMA_setIRQEnabled(ret->channelHandle, 1);
     
     ret->data = SYS_makeCoherent(pvPortMalloc(bufferSize));
     
